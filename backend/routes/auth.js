@@ -5,7 +5,7 @@ const { body, validationResult } = require('express-validator');
 
 
 
-router.get("/", [
+router.get("/createuser", [
     body('name', 'enter the valid name').isLength({min: 3}),
     body('email', 'enter the valid email').isEmail(),
     body('password', 'password must be atleast 5 characters').isLength({min: 5}),
@@ -19,8 +19,9 @@ router.get("/", [
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
+    try{
 
-    let user = User.findOne({rmail: req.body.email});
+    let user = await User.findOne({email: req.body.email});
     if(user){
       return res.status(400).json({error: "sorry a user with this email already exists"})
     }
@@ -33,6 +34,12 @@ router.get("/", [
   // .then(User =>  res.json(User))
   // .catch(err => {console.log(err)
     //  res.json({error: "please enter a valid email"})})
+
+    res.json(user)
+}catch(error){
+  console.log(error.message);
+  res.status(500).send("some error occured")
+}
 
 
 })
