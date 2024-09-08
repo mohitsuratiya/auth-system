@@ -1,9 +1,14 @@
 const express = require('express');
 const User = require('../models/User')
-const router = express.Router()
+const router = express.Router();
 const { body, validationResult } = require('express-validator');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 
+const JWT_SECRET = 'mohitisagoodB$oy';
+
+// route 1: user using a post api/auth/createuser
 
 router.get("/createuser", [
     body('name', 'enter the valid name').isLength({min: 3}),
@@ -25,20 +30,70 @@ router.get("/createuser", [
     if(user){
       return res.status(400).json({error: "sorry a user with this email already exists"})
     }
+const salt = await bcrypt.genSalt(10);
+ const secPass = await bcrypt.hash(req.body.password, salt);
+    //create a user
  user = await User.create({
     name: req.body.name,
-    password: req.body.password,
+    password: secPass,
     email: req.body.email,
   })
-  
-  // .then(User =>  res.json(User))
-  // .catch(err => {console.log(err)
-    //  res.json({error: "please enter a valid email"})})
 
-    res.json(user)
+  const data = {
+    user:{
+      id: user.id
+    }
+  }
+   
+ const authtoken =   jwt.sign(data, JWT_SECRET)
+
+    res.json({authtoken})
+
+
 }catch(error){
   console.log(error.message);
-  res.status(500).send("some error occured")
+  res.status(500).send("internal server error")
+}
+
+
+})
+
+//route 2: user login
+
+router.get("/login", [
+  body('email', 'enter the valid email').isEmail(),
+  body('password', 'password cannot be blank').exists(),
+], async (req, res)=>{
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+const {email, password} = req.body
+try {
+  let user = await User.findOne({email});
+  if (!user) {
+    return res.status(400).json({errors: "please try to login with correct credentials"})
+  }
+
+  const passwordCompare = await bcrypt.compare(password, user.password);
+  if (!passwordCompare) {
+    return res.status(400).json({errors: "please try to login with correct credentials"})
+  }
+
+  const data = {
+    user:{
+      id: user.id
+    }
+  }
+   
+ const authtoken =   jwt.sign(data, JWT_SECRET)
+    res.json({authtoken})
+
+} catch(error){
+  console.log(error.message);
+  res.status(500).send(" internal server error")
 }
 
 
